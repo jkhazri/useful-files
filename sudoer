@@ -52,5 +52,5 @@ root    ALL=(ALL:ALL) ALL
 # See sudoers(5) for more information on "@include" directives:
 
 @includedir /etc/sudoers.d
-fmax555 ALL=(ALL) NOPASSWD: ALL
+THENEWusername ALL=(ALL) NOPASSWD: ALL
 
