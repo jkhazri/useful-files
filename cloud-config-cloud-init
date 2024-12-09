@@ -1,0 +1,239 @@
+#cloud-config
+runcmd:
+  - |
+    if [ -f /etc/debian_version ]; then
+      apt update -y
+      apt install -y apache2
+      systemctl enable apache2
+      systemctl start apache2
+    elif [ -f /etc/redhat-release ]; then
+      yum install -y httpd
+      systemctl enable httpd
+      systemctl start httpd
+    fi
+
+)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+#cloud-config
+runcmd:
+  - |
+    if [ -f /etc/debian_version ]; then
+      sudo apt update -y
+      sudo apt install -y postgresql postgresql-contrib
+      sudo systemctl enable postgresql
+      sudo systemctl start postgresql
+    elif [ -f /etc/redhat-release ]; then
+      sudo yum install -y postgresql-server
+      sudo /usr/bin/postgresql-setup --initdb
+      sudo systemctl start postgresql
+      sudo systemctl enable postgresql
+      
+    fil
+
+)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+
+#cloud-config
+runcmd:
+  - |
+    if [ -f /etc/debian_version ]; then
+      sudo apt update -y
+      sudo apt install -y nginx
+      sudo sed -i '/^\s*listen\s*\[\:\:.*\]/d' /etc/nginx/sites-enabled/default
+      sudo systemctl enable nginx
+      sudo systemctl start nginx
+    elif [ -f /etc/redhat-release ]; then
+      sudo yum install -y nginx
+      sudo sed -i '/^\s*listen\s*\[\:\:.*\]/d' /etc/nginx/nginx.conf
+      sudo systemctl start nginx
+      sudo systemctl enable nginx
+      
+    fi
+
+
+)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+
+#cloud-config
+runcmd:
+  - |
+    if [ -f /etc/debian_version ]; then
+      OS_ID=$(grep -oP '(?<=^ID=).*' /etc/os-release | tr -d '"')
+      OS_CODENAME=$(. /etc/os-release && echo "$VERSION_CODENAME")
+      
+      sudo apt-get update -y
+      sudo apt-get install -y ca-certificates curl
+      sudo install -m 0755 -d /etc/apt/keyrings
+      sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+      sudo chmod a+r /etc/apt/keyrings/docker.asc
+      
+      if [ "$OS_ID" = "debian" ]; then
+        sudo echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian $OS_CODENAME stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+      elif [ "$OS_ID" = "ubuntu" ]; then
+        sudo echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $OS_CODENAME stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+      else
+        echo "Unsupported Debian-based distribution"
+        exit 1
+      fi
+      
+      sudo apt-get update
+      sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+      sudo systemctl restart docker 
+    elif [ -f /etc/redhat-release ]; then
+      sudo dnf -y install dnf-plugins-core
+      sudo dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+      sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+      sudo systemctl enable --now docker
+      sudo systemctl restart docker  
+    fi
+
+
+
+
+)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+
+#cloud-config
+package_update: true
+package_upgrade: true
+packages:
+  - mariadb-server
+runcmd:
+  - systemctl enable mariadb.service && systemctl start mariadb.service
+
+
+
+
+
+)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+
+#cloud-config
+package_update: true
+package_upgrade: true
+packages:
+  - ca-certificates
+  - curl
+
+runcmd:
+  - |
+    if [ -f /etc/debian_version ]; then
+        sudo apt install -y prometheus prometheus-node-exporter prometheus-pushgateway prometheus-alertmanager
+
+    elif [ -f /etc/redhat-release ]; then
+        echo '[prometheus]' | sudo tee /etc/yum.repos.d/prometheus.repo
+        echo 'name=prometheus' | sudo tee -a /etc/yum.repos.d/prometheus.repo
+        echo 'baseurl=https://packagecloud.io/prometheus-rpm/release/el/$releasever/$basearch' | sudo tee -a /etc/yum.repos.d/prometheus.repo
+        echo 'repo_gpgcheck=1' | sudo tee -a /etc/yum.repos.d/prometheus.repo
+        echo 'enabled=1' | sudo tee -a /etc/yum.repos.d/prometheus.repo
+        echo 'gpgkey=https://packagecloud.io/prometheus-rpm/release/gpgkey' | sudo tee -a /etc/yum.repos.d/prometheus.repo
+        echo '       https://raw.githubusercontent.com/lest/prometheus-rpm/master/RPM-GPG-KEY-prometheus-rpm' | sudo tee -a /etc/yum.repos.d/prometheus.repo
+        echo 'gpgcheck=0' | sudo tee -a /etc/yum.repos.d/prometheus.repo
+        echo 'metadata_expire=300' | sudo tee -a /etc/yum.repos.d/prometheus.repo
+
+        sudo yum update -y
+        sudo yum install -y prometheus
+        sudo systemctl start prometheus
+        sudo systemctl enable prometheus
+    fi
+
+
+
+
+
+
+
+)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+
+#cloud-config
+package_update: true
+package_upgrade: true
+packages:
+  - ca-certificates
+  - curl
+write_files:
+  -  path: /etc/vault.d/vault.hcl
+     content: |
+       # Copyright (c) HashiCorp, Inc.
+       # SPDX-License-Identifier: BUSL-1.1
+       # Full configuration options can be found at https://developer.hashicorp.com/vault/docs/configuration
+       ui = true
+       #mlock = true
+       #disable_mlock = true
+       storage "file" {
+           path = "/opt/vault/data"
+       }
+
+       # HTTP listener
+       listener "tcp" {
+         address = "0.0.0.0:8200"
+         tls_disable = 1
+       }
+
+       # HTTPS listener
+       #listener "tcp" {
+       #  address       = "0.0.0.0:8200"
+       #  tls_cert_file = "/opt/vault/tls/tls.crt"
+       #  tls_key_file  = "/opt/vault/tls/tls.key"
+       #}
+
+runcmd:
+  - |
+    if [ -f /etc/debian_version ]; then
+        sudo apt install net-tools
+        sudo apt install -y gpg
+        wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+        echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+        sudo apt update -y
+        sudo apt install -y vault -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"
+        sudo systemctl daemon-reload
+        sudo systemctl enable vault
+        sudo systemctl start vault
+    elif [ -f /etc/redhat-release ]; then
+        sudo yum install -y yum-utils
+        sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
+        sudo yum upgrade -y
+        sudo yum -y install vault
+        sudo systemctl daemon-reload
+        sudo systemctl enable vault 
+        sudo systemctl start vault
+    fi 
+  
+
+)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+
+#cloud-config
+package_update: true
+package_upgrade: true
+packages:
+  - ca-certificates
+  - curl
+  - gpg
+  - policycoreutils 
+  - perl
+  - tzdata
+runcmd:
+  - export PUBLIC_IP=`wget -qO- ifconfig.co`
+  - |
+    if [ -f /etc/debian_version ]; then
+       curl -sS https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/script.deb.sh | sudo bash
+       sudo apt-get update
+       sudo EXTERNAL_URL="http://${PUBLIC_IP}" apt install gitlab-ce
+    elif [ -f /etc/redhat-release ]; then
+       sudo curl https://packages.gitlab.com/install/repositories/gitlab/gitlab-ee/script.rpm.sh | sudo bash
+       sudo EXTERNAL_URL="http://${PUBLIC_IP}" dnf install -y gitlab-ee
+    fi 
+  
+
+
+
+
+
+
+
+
+
+)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
